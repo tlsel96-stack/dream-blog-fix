@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>DREAM BLOG 생성기</title>
+  <link rel="icon" href="data:,">
+
+  <style>
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; max-width:900px; margin:30px auto; }
+    h1 { text-align:center; margin-bottom:20px; font-size:32px; font-weight:800; cursor:pointer; }
+    .selected { background:#222 !important; color:#fff !important; font-weight:bold !important; }
+    .category-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px; }
+    .main-btn { padding:12px; background:#f5f5f5; border:1px solid #aaa; cursor:pointer; border-radius:6px; font-size:16px; }
+    .submenu { display:none; margin-bottom:20px; }
+    .sub-btn { padding:8px 10px; background:#fafafa; border:1px solid #ccc; cursor:pointer; border-radius:6px; margin:3px 0; width:100%; text-align:left; }
+
+    .form-box { margin-bottom:16px; }
+    input[type="text"], textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; box-sizing:border-box; }
+
+    .gen-btn { padding:14px; width:100%; background:#222; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:18px; margin-top:10px; }
+    .copy-btn { margin-top:4px; padding:6px 10px; font-size:12px; border-radius:4px; border:1px solid #aaa; background:#f7f7f7; cursor:pointer; }
+    #countBox { margin-top:5px; font-size:14px; }
+  </style>
+
+
+<script type="module">
+  import memberstackDOM from "https://cdn.jsdelivr.net/npm/@memberstack/dom@1/dist/memberstack-dom.esm.js";
+
+  window.memberstack = memberstackDOM.init({
+    publicKey: "pk_sb_85a479044b5bb91afa2d" 
+  });
+</script>
+
+
+
+
+</head>
+
+
+<body>
+
+<h1 onclick="goHome()">DREAM BLOG ✨</h1>
+
+<!-- 🔥 로그인/회원가입/로그아웃 버튼 -->
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <button id="login-btn" class="main-btn" style="flex:1;">로그인</button>
+  <button id="signup-btn" class="main-btn" style="flex:1;">회원가입</button>
+  <button id="logout-btn" class="main-btn" style="flex:1;">로그아웃</button>
+</div>
+
+
+<!-- === 카테고리 2줄 정렬 === -->
+<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+
+  <!-- 🔥 첫 번째 줄 : 이용가이드만 단독 -->
+  <div style="display:flex; justify-content:center;">
+    <button id="btnMain-guide" class="main-btn" 
+            style="width:100%; max-width:400px;"
+            onclick="onClickMain('guide')">
+      ✨ DREAM BLOG 이용가이드
+    </button>
+  </div>
+
+  <!-- 🔥 두 번째 줄 : 3개 카테고리 -->
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+    <button id="btnMain-blogPosting" class="main-btn" onclick="onClickMain('blogPosting')">
+      블로그 포스팅
+    </button>
+
+    <button id="btnMain-firstPlus광플" class="main-btn" onclick="onClickMain('firstPlus광플')">
+      첫세팅 + 광플만들기
+    </button>
+
+    <button id="btnMain-원고작성" class="main-btn" onclick="onClickMain('원고작성')">
+      원고작성
+    </button>
+  </div>
+
+</div>
+
+
+<div id="guideArea" style="display:none; margin-top:20px;">
+  <h2> ✨DREAM BLOG 이용가이드</h2>
+  
+  <div id="guideImages"></div>
+</div>
+
+
+<!-- 블로그 포스팅 소카테고리 -->
+<div id="menuBlogPosting" class="submenu">
+  <button id="sub-맛집" class="sub-btn" onclick="onClickSub('맛집')">맛집 글</button>
+  <button id="sub-병원글" class="sub-btn" onclick="onClickSub('병원글')">병원 글</button>
+  <button id="sub-정보성" class="sub-btn" onclick="onClickSub('정보성')">정보성</button>
+  <button id="sub-1000자" class="sub-btn" onclick="onClickSub('1000자')">1000자 이상 정보성</button>
+</div>
+
+<hr />
+
+<!-- 이 프롬프트는 숨김 -->
+<textarea id="promptInput" style="display:none;"></textarea>
+
+<div id="formArea">
+
+<!-- 제목 or 주제 -->
+<div class="form-box">
+  <label id="titleLabel">제목 붙여넣기</label>
+<input id="titleInput" 
+       type="text" 
+       placeholder="참고사항에서 복사한 제목 붙여넣기" 
+       autocomplete="off" 
+       autocorrect="off" 
+       autocapitalize="off" 
+       spellcheck="false"
+ />
+
+</div>
+
+<!-- OCR 붙여넣기 영역 (이미지 → 텍스트 자동 추출) -->
+<div id="pasteArea" 
+     style="border:2px dashed #ccc; padding:20px; border-radius:8px; text-align:center; margin-bottom:15px; cursor:pointer;"
+     tabindex="0">
+  📌 이미지 캡쳐 후 Ctrl + V 로 붙여넣기 하면 자동으로 텍스트로 변환됩니다.
+</div>
+
+<div id="status" style="margin-bottom:15px; color:#666; font-size:14px;"></div>
+
+<!-- 참고사항 -->
+<div class="form-box" id="referenceArea">
+  <label>참고사항</label>
+
+  <textarea id="referenceInput" rows="7" placeholder="참고 텍스트 또는 캡쳐한 참고사항 붙여넣기"></textarea>
+</div>
+
+<button id="generateBtn" class="gen-btn">📝 글 생성하기</button>
+<button id="resetBtn" class="gen-btn" style="background:#666;">🔄 다시 시작하기</button>
+</div> <!-- 🔥 formArea 끝 -->
+
+<hr />
+<!-- 🔥 결과 영역 시작 -->
+<div id="resultArea">
+<h2>결과</h2>
+
+<div class="form-box">
+  <label>생성된 제목</label>
+  <textarea id="resultTitle" rows="2" readonly></textarea>
+</div>
+<button class="copy-btn" onclick="copyText('resultTitle')">📋 제목 복사하기</button>
+
+<div class="form-box">
+  <label>생성된 본문</label>
+  <textarea id="resultBody" rows="18" readonly></textarea>
+</div>
+<button class="copy-btn" onclick="copyText('resultBody')">📋 본문 복사하기</button>
+
+<div class="form-box" id="tagBox" style="display:none;">
+  <label>해시태그</label>
+  <textarea id="resultTags" rows="3" readonly></textarea>
+</div>
+
+<div id="countBox">글자수: 0자</div>
+</div> <!-- 🔥 resultArea 끝 -->
+
+<script src="ocr.js"></script>
+
+<script>
+function copyText(id) {
+  const el = document.getElementById(id);
+  el.select();
+  el.setSelectionRange(0, 999999); // 모바일 대응
+  navigator.clipboard.writeText(el.value)
+    .then(() => alert("복사 완료!"))
+    .catch(() => alert("복사 실패ㅠㅠ"));
+}
+</script>
+
+
+ <script>
+/* ===============================
+    🔥 프리셋 (기본 제공 프롬프트)
+   =============================== */
+const FULL_PRESETS = {
+        맛집: `맛집 : 당신은 블로그 포스팅 작가입니다.
+seo기법을 사용해 사람들이 많이 유입 될 수 있는 글을 씁니다
+
+블로그 포스팅 작가로써 활발하면서 친근하고 자연스러운 20대 여성의 말투의 한국어로 글을 씁니다, 
+말투는 자연스럽지만 생동감 있게 다양한 표현을 섞어서 직접 경험한 듯한 사용합니다. 
+구구절절 AI처럼 느껴지는 진부한 표현말고 MZ세대 느낌의 말투로 포스팅을 작성합니다. 
+인사말은 여러분이 아닌 이웃님들로 사용합니다. 맛 평가도 해주세요.
+
+최적화된 SEO 작성 기법을 사용하여 블로그 포스팅 후기를 작성합니다.
+본문은 독창적인 내용으로 직접 다녀온 것 처럼 이 곳을 추천한다는 느낌으로 왜 이곳을 방문해야 하는지 어필하고
+ 자연스러운 스토리텔링으로 다양한 정보와 장점들을 자연스럽게 녹여서 작성하여 독자가 이 글을 읽고 방문해보고 
+싶다는 느낌이 들도록 작성하고, 적재적소에 이모티콘도 가끔 넣어줘.
+유사문서에 걸리지않게 작성해줘.
+
+외부-내부-음식 순서대로 자연스럽게 이어지는 후기성글 2000자 작성해줘
+반말은 말고 말투는 ~했어용!, ~답니다!, 밝고 에너지 넘치게 적어줘
+
+참고사항 외에 내용은 마음대로 추가하면 안되니깐 자연스럽게 이어지는 글로 참고사항보고 작성해줘`,
+
+        병원글: `당신은 "금지어 필터링 어시스턴트"입니다.
+내가 글 작성 또는 수정·검수를 요청할 때, 아래 ‘금지어 → 대체어 목록’을 반드시 준수하여 최종 결과물을 생성하세요.
+만약 최종 답변 안에 금지어가 포함되어 있다면, 해당 부분을 즉시 대체어로 변경하여 금지어가 전혀 없는 최종판을 제시해야 합니다.
+
+금지어 → 대체어 목록
+다녀 → 내원
+방문 → 내원
+방문객->고객, 이용객
+추천 → 권장
+경험 → 체험
+전문, 전문적 → 특화, 특화된
+전문가, 전문의 → 의료인
+전문적인 진료 -> 특화된 진료
+전문성 → 특화된 능력
+최신 → 혁신
+첨단 → 혁신
+최소 → 적은
+최고 → 우수한
+최상 → 우수한
+확실 → 명확
+정확 → 정밀
+안전, 안정성 → 검증된, 안보, 안심
+만족 → 믿음직한, 자족 
+만족감->충족감
+보장 → 보증
+부작용 → 개개인에 따른, 후유증, 해악
+무료 → 비용 없음
+할인 → 가격 인하
+혜택 → 이점
+특가 → 특별 가격
+수험생 → 시험 준비생
+효능 → 기능
+효과 → 결과, 효율, 효능, 성과, 영향, 도움
+맞춤 → 맞춘, 개인에게 맞는, 개인화된, 개별형, 특화된,
+맞춤형 → 개개인의, 개인화된, 개별형, 특화된,
+완치 → 치유
+
+사용 방법
+글 작성 또는 수정 시, 작성된 내용에서 금지어가 하나라도 포함되어 있는지 확인합니다.
+만약 포함되어 있다면, 반드시 위 수정을 참조하여 대체어로 수정합니다.
+최종 결과물에는 금지어가 절대로 등장하지 않도록 유의합니다.
+금지어가 필요한 문맥이어도, 반드시 대체어만 사용해야 합니다.
+금지어에  <은, 는, 이, 가, 를, 을, 들, 과, 의, 인, 으로 , 한,> 등의 조사가 붙어도 대체어로 수정 해야합니다.
+수정한 글의 문맥이 어색하고 이상해도 금지어 단어는 무슨일이 있어도 수정 해줘야 합니다.
+
+최종 목표
+-어떤 글이든 작성할 때 금지어가 전혀 나오지 않는 최종 버전을 만들어야 합니다.
+-만약 금지어가 포함되었다면, 해당 부분을 반드시 대체어로 교체해 수정본을 제공합니다.
+-글은 소 제목 없이, 목차 나누는 것 없이, 괄호없는 글을 작성해야합니다. 
+-독자들이 읽기 수월하게 자연스럽게 이어지는 정보성글 600자 작성해야합니다.`,
+
+        정보성: `너는 정보성 블로그를 작성하는 블로거야
+seo기법을 사용해 누락되지 않는 블로그 글 작성해줘
+
+-자연스럽게 이어지는 정보성 포스팅 1000자 작성해줘. 
+-사람들이 보고 이해하기 쉽도록 본문은 상세하게 설명해줘. 
+-전문가느낌이 나는 자연스러운 말투로 작성해줘. 
+-문단을 나누지 않고 자연스럽게 이어지는 글로 작성해줘.
+-네이버 블로그 유사문서, 중복문서에 걸리지 않도록, 사실을 바탕으로 작성해줘.
+-SEO기법으로 상위노출이 가능하게끔 키워드를 적절하게 사용해서 작성해줘.
+-사람들이 읽고 흥미를 가질만하게 적어줘.
+-참고사항 외에 다른 내용은 절대로 들어가면 안되니깐 그 부분 참고해서 자연스럽게 이어지는 글 작성해줘`,
+
+        "1000자": `[조건:블로그전문가로써,한글로블로그글작성부탁해!
+유사문서중복문서에걸리지않도록!사실을바탕으로!
+글자수3000자!
+사람이쓴것처럼자연어로작성!(~좋아요! , ~했어요!)
+소제목없이 자연스럽게 이어지는 글로 작성!
+
+참고사항에 없는 내용은 들어가면 안돼.
+
+정보성 포스팅 작성해줘. 
+사람들이 보고 이해하기 쉽도록 
+본문은 상세하게 설명해주고 전문가느낌이 나는 자연스러운 말투로 작성해줘.
+SEO기법을 사용해 상위노출이 가능하게끔 키워드를 적절하게 사용해서 작성해줘.]`,
+
+      "firstPlus광플": `
+당신은 SEO에 특화된 블로그 콘텐츠 전문가입니다.  
+다음 조건을 기반으로 블로그 글을 작성해주세요.
+다음 조건을 기반으로 블로그 글을 작성해주세요.
+
+1. 글의 주제에 맞는 검색 유입률 높은 제목을 제안해주세요.  
+
+2. 본문은 다음 구조를 따릅니다:  
+- 1문단: 공감형 도입부  
+- 2문단: 문제 제기 또는 정보 요약  
+- 3~6문단: 소제목으로 나눠 구체적인 설명 & 추천
+- 마지막 문단: 요약, 마무리 멘트
+
+3. 본문에는 주어진 중요 키워드 3~5개를 자연스럽게 분산 반복 사용해주세요.  
+   단, 작위적인 반복은 금지합니다. 독자 입장에서 읽히는 수준으로 써주세요.
+
+4. 글 길이는 최소 1,200자 이상이며, 가독성 높은 문장, 소제목 분할, 말투는 자연스러운 블로그 스타일로 써주세요.
+
+5. 글 하단에는 SEO 최적화 해시태그 20~30개를 추천해주세요.
+
+6. [블로그 주제]에 맞춰서 상위노출이 잘 될 수 있게 검색에 많이 노출되는 단어 기준으로 제목/본문/해시태그를 구성해주세요.
+
+7. 적재적소에 이모티콘을 넣어서 친근하게 글을 작성해주세요.
+
+[블로그 주제]: (여기에 내가 쓰고 싶은 주제만 바꿔 입력하면 돼!)`,
+
+        원고작성: `seo기법을 사용해 후기성 블로그 포스팅 원고를 작성합니다
+
+블로그 포스팅 작가로써 활발하면서 친근하고 자연스러운 20대 여성의 말투의 한국어로 글을 씁니다, 
+자연스럽게 이어지는 글로 강조하는 부분 없이 블로그 후기성 글 1000자 작성해주세요.
+전체적인 가게 소개와 음식소개 마무리로 해주세요.
+순서는 스토리텔링을 넣고 외부 내부 음식 순서대로 넣어주고
+소제목 없이 자연스럽게 이어지는 글로 작성해야하고 글자수는 700자 아래로 적지말아주세요.`,
+      };
+
+/* ===============================
+        🔥 UI 제어
+=============================== */
+function clearSelections() {
+  document.querySelectorAll(".main-btn, .sub-btn").forEach(b =>
+    b.classList.remove("selected")
+  );
+}
+
+function hideAllSubmenus() {
+  document.querySelectorAll(".submenu").forEach(m => m.style.display = "none");
+}
+
+window.onClickMain = (type) => {
+  clearSelections();
+  hideAllSubmenus();
+
+  // 🔥 guide가 아닐 때는 글쓰기폼/결과창 다시 표시
+  document.getElementById("formArea").style.display = "block";
+  document.getElementById("resultArea").style.display = "block";
+
+  document.getElementById("btnMain-" + type).classList.add("selected");
+
+  // 🔥 guide 클릭 시
+  if (type === "guide") {
+    clearSelections();
+    hideAllSubmenus();
+
+    document.getElementById("guideArea").style.display = "block";
+
+    // 폼/결과창 숨김
+    document.getElementById("formArea").style.display = "none";
+    document.getElementById("resultArea").style.display = "none";
+
+    loadGuideImages();
+    return;
+  }
+
+  document.getElementById("guideArea").style.display = "none";
+  // 🔥🔥🔥 여기까지
+
+  // 첫세팅+광플 → 주제 입력 모드
+  if (type === "firstPlus광플") {
+    document.getElementById("titleLabel").innerText = "주제 입력하기";
+    document.getElementById("titleInput").placeholder = "예: 녹차 효능, 다이어트 방법 등 주제 입력";
+    document.getElementById("referenceArea").style.display = "none";
+    document.getElementById("promptInput").value = FULL_PRESETS[type];
+    return;
+  }
+
+  // 원고작성 또는 기타 일반 모드
+  if (type === "원고작성") {
+    document.getElementById("titleLabel").innerText = "제목 붙여넣기";
+    document.getElementById("titleInput").placeholder = "참고사항에서 복사한 제목 붙여넣기";
+    document.getElementById("referenceArea").style.display = "block";
+    document.getElementById("promptInput").value = FULL_PRESETS[type];
+    return;
+  }
+
+  // 블로그 포스팅 선택 시 소카테고리 표시
+  if (type === "blogPosting") {
+    document.getElementById("menuBlogPosting").style.display = "block";
+    document.getElementById("titleLabel").innerText = "제목 붙여넣기";
+    document.getElementById("referenceArea").style.display = "block";
+    document.getElementById("promptInput").value = "";
+  }
+};
+
+window.onClickSub = (key) => {
+  document.querySelectorAll(".sub-btn").forEach(b => b.classList.remove("selected"));
+  document.getElementById("sub-" + key).classList.add("selected");
+  document.getElementById("promptInput").value = FULL_PRESETS[key];
+};
+
+
+/* ===============================
+      🔥 생성 버튼
+=============================== */
+document.getElementById("generateBtn").addEventListener("click", async () => {
+  const basePrompt = document.getElementById("promptInput").value.trim();
+  const userTitle = document.getElementById("titleInput").value.trim();
+  const ref = document.getElementById("referenceInput").value.trim();
+
+  if (!basePrompt) return alert("카테고리를 먼저 선택해주세요.");
+
+  let mergedPrompt = "";
+
+if (document.getElementById("btnMain-firstPlus광플").classList.contains("selected")) {
+
+    mergedPrompt = `
+${basePrompt}
+
+[주제]
+${userTitle}
+
+JSON ONLY:
+{
+  "title": "",
+  "body": "",
+  "tags": ""
+}
+`;
+
+} else if (document.getElementById("btnMain-원고작성").classList.contains("selected")) {
+
+    // 🔥 원고작성 전용 프롬프트 생성
+    mergedPrompt = `
+${basePrompt}
+
+[제목]
+${userTitle}
+
+[참고사항]
+${ref}
+
+- 참고사항 내용을 기반으로 블로그 후기 작성
+- 참고사항에 있는 정보만 활용해 자연스럽게 스토리 작성
+- 제목은 실제 블로그 제목 스타일로 변환해서 생성
+
+JSON ONLY:
+{
+  "title": "",
+  "body": ""
+}
+`;
+
+} else {
+
+    mergedPrompt = `
+${basePrompt}
+
+[제목 템플릿]
+${userTitle}
+
+[참고사항]
+${ref}
+
+JSON ONLY:
+{
+  "title": "",
+  "body": ""
+}
+`;
+}
+
+
+// 🔥 매번 다른 느낌으로 생성되도록 랜덤 스타일 요소 추가
+const randomStyle = [
+  "밝은 톤", 
+  "차분한 톤",
+  "감성적인 스타일",
+  "리듬감 있는 문장 스타일",
+  "대화체 느낌",
+  "생생한 묘사 중심 톤"
+];
+
+const pickedStyle = randomStyle[Math.floor(Math.random() * randomStyle.length)];
+
+mergedPrompt += `
+
+[추가 조건]
+- 동일한 참고 텍스트라도 매번 다르게 생성해주세요.
+- 표현 방식, 서술 흐름, 도입부 스타일, 문장 구조를 생성 시마다 다르게 변화시켜주세요.
+- 이번 글은 '${pickedStyle}' 느낌으로 작성해주세요.
+`;
+
+
+  let btn = document.getElementById("generateBtn");
+  btn.disabled = true;
+  btn.innerText = "생성 중...";
+
+  try {
+const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: mergedPrompt,
+        temperature: 1.4,
+        top_p: 1
+      })
+});
+
+    const data = await res.json();
+ let result = data.data;
+
+if (typeof result === "string") {
+  result = JSON.parse(result.replace(/```json/g, "").replace(/```/g, ""));
+}
+
+
+    document.getElementById("resultTitle").value = result.title || "";
+    document.getElementById("resultBody").value = (result.body || "").replace(/\\n/g, "\n");
+
+    // 해시태그 있을 때만 표시
+    if (result.tags) {
+      document.getElementById("tagBox").style.display = "block";
+      document.getElementById("resultTags").value = result.tags;
+    } else {
+      document.getElementById("tagBox").style.display = "none";
+    }
+
+    updateCount();
+
+  } catch (err) {
+    alert("오류 발생");
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.innerText = "📝 글 생성하기";
+});
+
+
+/* ===============================
+        🔥 유틸
+=============================== */
+function updateCount() {
+  const len = document.getElementById("resultBody").value.replace(/\s+/g, "").length;
+  document.getElementById("countBox").innerText = "글자수: " + len + "자";
+}
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  location.reload();
+});
+
+function goHome() {
+  // 모든 선택 초기화
+  document.querySelectorAll(".main-btn, .sub-btn").forEach(b => b.classList.remove("selected"));
+
+  // 입력값 초기화
+  document.getElementById("promptInput").value = "";
+  document.getElementById("titleInput").value = "";
+  document.getElementById("referenceInput").value = "";
+  document.getElementById("resultTitle").value = "";
+  document.getElementById("resultBody").value = "";
+  document.getElementById("resultTags").value = "";
+
+  // 글자수 초기화
+  document.getElementById("countBox").innerText = "글자수: 0자";
+
+  // 해시태그 박스 숨기기
+  document.getElementById("tagBox").style.display = "none";
+
+  // 참고사항 영역 다시 표시
+  document.getElementById("referenceArea").style.display = "block";
+
+  // 제목 라벨 원래대로
+  document.getElementById("titleLabel").innerText = "제목 붙여넣기";
+  document.getElementById("titleInput").placeholder = "참고사항에서 복사한 제목 붙여넣기";
+
+  // 소카테고리 숨기기
+  hideAllSubmenus();
+
+  // 맨 위로 이동
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+/* ================================
+   📌 GUIDE 이미지 불러오기 함수
+================================ */
+async function loadGuideImages() {
+  const area = document.getElementById("guideImages");
+  area.innerHTML = "<p>⏳ 가이드 로딩중...</p>";
+
+  try {
+    const res = await fetch("/api/guide-images");
+    const data = await res.json();
+
+    if (!data.ok) {
+      area.innerHTML = "<p>❌ 가이드 이미지를 불러오지 못했습니다.</p>";
+      return;
+    }
+
+    // 이미지 렌더링
+    area.innerHTML = data.images
+      .map(img => `<img src="/guide/${img}" style="width:100%; margin-bottom:20px;" />`)
+      .join("");
+  } catch (err) {
+    console.error(err);
+    area.innerHTML = "<p>❌ 오류 발생</p>";
+  }
+}
+
+</script>  <!-- 🔥 여기서 기존 JS를 정확히 닫아줘야 함 -->
+
+<script>
+document.getElementById("login-btn").addEventListener("click", function () {
+  window.memberstack.openModal("login");
+});
+
+document.getElementById("signup-btn").addEventListener("click", function () {
+  window.memberstack.openModal("signup");
+});
+
+document.getElementById("logout-btn").addEventListener("click", function () {
+  window.memberstack.logout();
+});
+</script>
+
+</body>
+</html>
